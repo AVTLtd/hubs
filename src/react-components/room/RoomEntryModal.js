@@ -29,7 +29,9 @@ export function RoomEntryModal({
   ...rest
 }) {
   const breakpoint = useCssBreakpoints();
+  // READYPLAYERME
   readyPlayerMe();
+  // / READYPLAYERME
   return (
     <Modal className={classNames(styles.roomEntryModal, className)} disableFullscreen {...rest}>
       <Column center className={styles.content}>
