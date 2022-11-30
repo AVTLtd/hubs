@@ -1,8 +1,7 @@
 export function readyPlayerMe() {
-  // const readyPlayerMeData = window.location.href;
-  const test_string =
-    "https://avt-hub.com/7t2qZXb?embed_token=5689d41b9e8994901646505c99899f26&name=tristan%20test&glb=https%3A%2F%2Fmodels.readyplayer.me%2F637ca88a211e016e93c9caef.glb";
-  const url = new URL(test_string);
+  // const test_string = "https://avt-hub.com/7t2qZXb?embed_token=5689d41b9e8994901646505c99899f26&name=John%20Doe&glb=https%3A%2F%2Fmodels.readyplayer.me%2F637ca88a211e016e93c9caef.glb";
+  const readyPlayerMeData = window.location.href;
+  const url = new URL(readyPlayerMeData);
   const avatarId = url.searchParams.get("glb");
   const displayName = url.searchParams.get("name");
 
