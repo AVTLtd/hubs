@@ -7,7 +7,7 @@ import { Column } from "../layout/Column";
 import { FormattedMessage } from "react-intl";
 
 export function AvatarSettingsContent({
-  displayName,
+  // displayName,
   displayNameInputRef,
   disableDisplayNameInput,
   onChangeDisplayName,
