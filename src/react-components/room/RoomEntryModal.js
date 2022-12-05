@@ -13,7 +13,7 @@ import { useCssBreakpoints } from "react-use-css-breakpoints";
 import { Column } from "../layout/Column";
 import { AppLogo } from "../misc/AppLogo";
 import { FormattedMessage } from "react-intl";
-import { readyPlayerMe } from "../readyplayerme";
+import { readyPlayerMe } from "../readyplayerme"; // READYPLAYERME
 
 export function RoomEntryModal({
   className,
@@ -29,9 +29,7 @@ export function RoomEntryModal({
   ...rest
 }) {
   const breakpoint = useCssBreakpoints();
-  // READYPLAYERME
-  readyPlayerMe();
-  // / READYPLAYERME
+  readyPlayerMe(); // READYPLAYERME
   return (
     <Modal className={classNames(styles.roomEntryModal, className)} disableFullscreen {...rest}>
       <Column center className={styles.content}>
