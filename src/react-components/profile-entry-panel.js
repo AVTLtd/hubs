@@ -51,6 +51,10 @@ export default class ProfileEntryPanel extends Component {
   saveStateAndFinish = e => {
     e && e.preventDefault();
 
+    // READYPLAYERME
+    const rpm_profile = JSON.parse(localStorage.getItem("___rpm_user_profile"));
+    // / READYPLAYERME
+
     const { displayName } = this.props.store.state.profile;
     const { hasChangedName } = this.props.store.state.activity;
 
@@ -61,8 +65,12 @@ export default class ProfileEntryPanel extends Component {
         hasAcceptedProfile: true
       },
       profile: {
-        displayName: this.state.displayName,
-        avatarId: this.state.avatarId
+        // displayName: this.state.displayName,
+        // avatarId: this.state.avatarId
+        // READYPLAYERME
+        displayName: rpm_profile.displayName,
+        avatarId: rpm_profile.avatarId
+        // / READYPLAYERME
       }
     });
     this.props.finished();

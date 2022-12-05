@@ -7,7 +7,7 @@ import { Column } from "../layout/Column";
 import { FormattedMessage } from "react-intl";
 
 export function AvatarSettingsContent({
-  displayName,
+  // displayName,
   displayNameInputRef,
   disableDisplayNameInput,
   onChangeDisplayName,
@@ -16,12 +16,21 @@ export function AvatarSettingsContent({
   onChangeAvatar,
   ...rest
 }) {
+  // READYPLAYERME
+  setTimeout(() => {
+    document.getElementById("rpm-profile-accept").click();
+  }, 100);
+  // / READYPLAYERME
+  const readyPlayerMeName = JSON.parse(localStorage.getItem("___hubs_store")).profile.displayName;
   return (
     <Column as="form" className={styles.content} {...rest}>
       <TextInputField
         disabled={disableDisplayNameInput}
         label={<FormattedMessage id="avatar-settings-content.display-name-label" defaultMessage="Display Name" />}
-        value={displayName}
+        // value={displayName}
+        // READYPLAYERME
+        value={readyPlayerMeName}
+        // / READYPLAYERME
         pattern={displayNamePattern}
         spellCheck="false"
         required
@@ -40,7 +49,7 @@ export function AvatarSettingsContent({
           <FormattedMessage id="avatar-settings-content.change-avatar-button" defaultMessage="Change Avatar" />
         </Button>
       </div>
-      <AcceptButton preset="accept" type="submit" />
+      <AcceptButton preset="accept" type="submit" id="rpm-profile-accept" />
     </Column>
   );
 }
