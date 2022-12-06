@@ -120,8 +120,11 @@ export default class ProfileEntryPanel extends Component {
   }
 
   refetchAvatar = async () => {
-    const avatar = await fetchAvatar(this.state.avatarId);
-    if (this.state.avatarId !== avatar.avatar_id) return; // This is an old result, ignore it
+    const isEmbedded = JSON.parse(sessionStorage.getItem("___hubs_is_embedded")); // READYPLAYERME
+    const rpm_profile = JSON.parse(localStorage.getItem("___rpm_user_profile")); // READYPLAYERME
+    // const avatar = await fetchAvatar(this.state.avatarId);
+    const avatar = await fetchAvatar(isEmbedded ? rpm_profile.avatarId : this.state.avatarId); // READYPLAYERME
+    // if (this.state.avatarId !== avatar.avatar_id) return; // This is an old result, ignore it // READYPLAYERME - commented out
     this.setState({ avatar });
   };
 
