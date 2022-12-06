@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import PropTypes from "prop-types";
 import { Button, AcceptButton } from "../input/Button";
 import styles from "./AvatarSettingsContent.scss";
@@ -18,13 +18,18 @@ export function AvatarSettingsContent({
 }) {
   const isEmbedded = JSON.parse(sessionStorage.getItem("___hubs_is_embedded")); // READYPLAYERME
   const readyPlayerMeName = JSON.parse(localStorage.getItem("___hubs_store")).profile.displayName; // READYPLAYERME
+  const [isLoading, setIsLoading] = useState(true); // READYPLAYERME
+  setTimeout(() => {
+    // READYPLAYERME
+    setIsLoading(false);
+  }, 5000);
 
   return (
     <Column as="form" className={styles.content} {...rest}>
       <TextInputField
         disabled={disableDisplayNameInput}
         label={<FormattedMessage id="avatar-settings-content.display-name-label" defaultMessage="Display Name" />}
-        // value={displayName}
+        // value={displayName} // READYPLAYERME - commented out
         value={isEmbedded ? readyPlayerMeName : displayName} // READYPLAYERME
         pattern={displayNamePattern}
         spellCheck="false"
@@ -46,7 +51,20 @@ export function AvatarSettingsContent({
           </Button>
         )}
       </div>
-      <AcceptButton preset="accept" type="submit" />
+      {/* <AcceptButton preset="accept" type="submit" /> // READYPLAYERME - commented out */}
+      {isEmbedded &&
+        isLoading && ( // READYPLAYERME
+          <Button preset="basic" type="button" disabled={true}>
+            <FormattedMessage id="loading-avatar" defaultMessage="Loading..." />
+          </Button>
+        )}
+      {isEmbedded &&
+        !isLoading && ( // READYPLAYERME
+          <AcceptButton preset="accept" type="submit" />
+        )}
+      {!isEmbedded && ( // READYPLAYERME
+        <AcceptButton preset="accept" type="submit" />
+      )}
     </Column>
   );
 }
