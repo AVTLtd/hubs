@@ -8,6 +8,9 @@ export function readyPlayerMe() {
   const displayName = url.searchParams.get("name");
 
   if (isEmbedded !== null) {
+    // clear local storage at start
+    localStorage.clear();
+
     // set session flag to to use for other pages
     sessionStorage.setItem("___hubs_is_embedded", true);
 
