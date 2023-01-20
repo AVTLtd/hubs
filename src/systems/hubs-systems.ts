@@ -32,7 +32,8 @@ import { EnvironmentSystem } from "./environment-system";
 import { NameTagVisibilitySystem } from "./name-tag-visibility-system";
 
 // new world
-import { networkSendSystem, networkReceiveSystem } from "./netcode";
+import { networkReceiveSystem } from "../bit-systems/network-receive-system";
+import { networkSendSystem } from "../bit-systems/network-send-system";
 import { onOwnershipLost } from "./on-ownership-lost";
 import { interactionSystem } from "./bit-interaction-system";
 import { floatyObjectSystem } from "./floaty-object-system";
@@ -49,10 +50,16 @@ import { mediaLoadingSystem } from "../bit-systems/media-loading";
 import { physicsCompatSystem } from "./bit-physics";
 import { destroyAtExtremeDistanceSystem } from "./bit-destroy-at-extreme-distances";
 import { videoMenuSystem } from "../bit-systems/video-menu-system";
+import { objectMenuSystem } from "../bit-systems/object-menu";
 import { deleteEntitySystem } from "../bit-systems/delete-entity-system";
 import type { HubsSystems } from "aframe";
 import { Camera, Scene, WebGLRenderer } from "three";
 import { HubsWorld } from "../app";
+import { sceneLoadingSystem } from "../bit-systems/scene-loading";
+import { networkDebugSystem } from "../bit-systems/network-debug";
+import qsTruthy from "../utils/qs_truthy";
+import { waypointSystem } from "../bit-systems/waypoint";
+import { objectSpawnerSystem } from "../bit-systems/object-spawner";
 
 declare global {
   interface Window {
@@ -67,6 +74,8 @@ const timeSystem = (world: HubsWorld) => {
   time.elapsed = now;
   time.tick++;
 };
+
+const enableNetworkDebug = qsTruthy("networkDebug");
 
 // NOTE keeping this around since many things index into it to get a reference to a system. This will
 // naturally burn down as we migrate things, so it is not worth going through and changing all of them.
@@ -158,6 +167,7 @@ export function mainTick(xrFrame: XRFrame, renderer: WebGLRenderer, scene: Scene
 
   networkReceiveSystem(world);
   onOwnershipLost(world);
+  sceneLoadingSystem(world, hubsSystems.environmentSystem, hubsSystems.characterController);
   mediaLoadingSystem(world);
 
   physicsCompatSystem(world);
@@ -174,6 +184,7 @@ export function mainTick(xrFrame: XRFrame, renderer: WebGLRenderer, scene: Scene
   // We run this earlier in the frame so things have a chance to override properties run by animations
   hubsSystems.animationMixerSystem.tick(dt);
 
+  waypointSystem(world, hubsSystems.characterController, sceneEl.is("frozen"));
   hubsSystems.characterController.tick(t, dt);
   hubsSystems.cursorTogglingSystem.tick(aframeSystems.interaction, aframeSystems.userinput, hubsSystems.el);
   hubsSystems.interactionSfxSystem.tick(
@@ -182,6 +193,7 @@ export function mainTick(xrFrame: XRFrame, renderer: WebGLRenderer, scene: Scene
     hubsSystems.soundEffectsSystem
   );
   hubsSystems.superSpawnerSystem.tick();
+  objectSpawnerSystem(world);
   hubsSystems.emojiSystem.tick(t, aframeSystems.userinput);
   hubsSystems.cursorPoseTrackingSystem.tick();
   hubsSystems.hoverMenuSystem.tick();
@@ -212,6 +224,7 @@ export function mainTick(xrFrame: XRFrame, renderer: WebGLRenderer, scene: Scene
   hubsSystems.spriteSystem.tick(t, dt);
   hubsSystems.uvScrollSystem.tick(dt);
   hubsSystems.shadowSystem.tick();
+  objectMenuSystem(world, sceneEl.is("frozen"), aframeSystems.userinput, APP.hubChannel!);
   videoMenuSystem(world, aframeSystems.userinput);
   videoSystem(world, hubsSystems.audioSystem);
   mediaFramesSystem(world);
@@ -229,7 +242,19 @@ export function mainTick(xrFrame: XRFrame, renderer: WebGLRenderer, scene: Scene
 
   networkSendSystem(world);
 
-  renderer.render(scene, camera);
+  if (enableNetworkDebug) {
+    networkDebugSystem(world, scene);
+  }
+
+  scene.updateMatrixWorld();
+
+  renderer.info.reset();
+  if (APP.fx.composer) {
+    APP.fx.composer.render();
+  } else {
+    renderer.render(scene, camera);
+  }
+
   // tock()s on components and system will fire here. (As well as any other time render() is called without unbinding onAfterRender)
   // TODO inline invoking tocks instead of using onAfterRender registered in a-scene
 }

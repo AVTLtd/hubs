@@ -10,8 +10,8 @@ export const Networked = defineComponent({
   id: Types.ui32,
   creator: Types.ui32,
   owner: Types.ui32,
-
-  lastOwnerTime: Types.ui32
+  lastOwnerTime: Types.ui32,
+  timestamp: Types.ui32
 });
 Networked.id[$isStringType] = true;
 Networked.creator[$isStringType] = true;
@@ -33,27 +33,26 @@ export const MediaFrame = defineComponent({
   previewingNid: Types.eid
 });
 export const Text = defineComponent();
+export const ReflectionProbe = defineComponent();
 export const Slice9 = defineComponent({
   insets: [Types.ui32, 4],
   size: [Types.f32, 2]
 });
-
 export const NetworkedTransform = defineComponent({
   position: [Types.f32, 3],
   rotation: [Types.f32, 4],
   scale: [Types.f32, 3]
 });
-
 export const AEntity = defineComponent();
 export const Object3DTag = defineComponent();
 export const GLTFModel = defineComponent();
+export const DirectionalLight = defineComponent();
 export const CursorRaycastable = defineComponent();
 export const RemoteHoverTarget = defineComponent();
 export const NotRemoteHoverTarget = defineComponent();
 export const Holdable = defineComponent();
 export const RemoveNetworkedEntityButton = defineComponent();
 export const Interacted = defineComponent();
-
 export const HandRight = defineComponent();
 export const HandLeft = defineComponent();
 export const RemoteRight = defineComponent();
@@ -76,12 +75,10 @@ export const OffersRemoteConstraint = defineComponent();
 export const HandCollisionTarget = defineComponent();
 export const OffersHandConstraint = defineComponent();
 export const TogglesHoveredActionSet = defineComponent();
-
 export const HoverButton = defineComponent({ type: Types.ui8 });
 export const TextButton = defineComponent({ labelRef: Types.eid });
 export const HoldableButton = defineComponent();
 export const SingleActionButton = defineComponent();
-
 export const Pen = defineComponent();
 export const HoverMenuChild = defineComponent();
 export const Static = defineComponent();
@@ -99,12 +96,10 @@ export const PhysicsShape = defineComponent({ bodyId: Types.ui16, shapeId: Types
 export const Pinnable = defineComponent();
 export const Pinned = defineComponent();
 export const DestroyAtExtremeDistance = defineComponent();
-
 export const MediaLoading = defineComponent();
-
 export const FloatyObject = defineComponent({ flags: Types.ui8, releaseGravity: Types.f32 });
+export const NetworkedFloatyObject = defineComponent({ flags: Types.ui8 });
 export const MakeKinematicOnRelease = defineComponent();
-
 export const CameraTool = defineComponent({
   snapTime: Types.f32,
   state: Types.ui8,
@@ -131,22 +126,24 @@ export const MediaLoader = defineComponent({
 });
 MediaLoader.src[$isStringType] = true;
 
-export const TextureCacheKey = defineComponent({
-  src: Types.ui32,
-  version: Types.ui8
+export const SceneRoot = defineComponent();
+export const NavMesh = defineComponent();
+export const SceneLoader = defineComponent({ src: Types.ui32 });
+SceneLoader.src[$isStringType] = true;
+
+export const MediaImage = defineComponent({
+  cacheKey: Types.ui32
 });
-TextureCacheKey.src[$isStringType] = true;
+MediaImage.cacheKey[$isStringType] = true;
 
 export const MediaVideo = defineComponent({
   autoPlay: Types.ui8
 });
-
 export const AnimationMixer = defineComponent();
 export const NetworkedVideo = defineComponent({
   time: Types.f32,
   flags: Types.ui8
 });
-
 export const VideoMenuItem = defineComponent();
 export const VideoMenu = defineComponent({
   videoRef: Types.eid,
@@ -156,7 +153,44 @@ export const VideoMenu = defineComponent({
   playIndicatorRef: Types.eid,
   pauseIndicatorRef: Types.eid
 });
-
 export const AudioEmitter = defineComponent();
 export const AudioSettingsChanged = defineComponent();
 export const Deletable = defineComponent();
+export const EnvironmentSettings = defineComponent();
+EnvironmentSettings.map = new Map();
+
+// TODO: Store this data elsewhere, since only one or two will ever exist.
+export const ObjectMenu = defineComponent({
+  pinButtonRef: Types.eid,
+  unpinButtonRef: Types.eid,
+  cameraFocusButtonRef: Types.eid,
+  cameraTrackButtonRef: Types.eid,
+  removeButtonRef: Types.eid,
+  dropButtonRef: Types.eid,
+  inspectButtonRef: Types.eid,
+  deserializeDrawingButtonRef: Types.eid,
+  openLinkButtonRef: Types.eid,
+  refreshButtonRef: Types.eid,
+  cloneButtonRef: Types.eid,
+  rotateButtonRef: Types.eid,
+  mirrorButtonRef: Types.eid,
+  scaleButtonRef: Types.eid,
+  targetRef: Types.eid
+});
+export const ObjectMenuTarget = defineComponent();
+export const NetworkDebug = defineComponent();
+export const NetworkDebugRef = defineComponent({
+  ref: Types.eid
+});
+export const Waypoint = defineComponent({
+  flags: Types.ui8
+});
+export const NetworkedWaypoint = defineComponent({
+  occupied: Types.ui8
+});
+export const WaypointPreview = defineComponent();
+export const Skybox = defineComponent();
+export const ObjectSpawner = defineComponent({
+  src: Types.ui32,
+  flags: Types.ui8
+});

@@ -1,17 +1,20 @@
 import { defineQuery, exitQuery, hasComponent, removeEntity } from "bitecs";
 import {
-  TextureCacheKey,
+  AudioEmitter,
+  EnvironmentSettings,
   GLTFModel,
+  MediaImage,
   MediaFrame,
+  MediaVideo,
   Object3DTag,
   Slice9,
   Text,
-  AudioEmitter,
-  VideoMenu
+  VideoMenu,
+  Skybox
 } from "../bit-components";
 import { gltfCache } from "../components/gltf-model-plus";
-import { releaseTexture } from "../utils/load-texture";
-import { traverseSome } from "../utils/three-utils";
+import { releaseTextureByKey } from "../utils/load-texture";
+import { disposeMaterial, traverseSome } from "../utils/three-utils";
 
 function cleanupObjOnExit(Component, f) {
   const query = exitQuery(defineQuery([Component]));
@@ -20,10 +23,23 @@ function cleanupObjOnExit(Component, f) {
   };
 }
 
+function cleanupOnExit(Component, f) {
+  const query = exitQuery(defineQuery([Component]));
+  return function (world) {
+    query(world).forEach(eid => f(eid));
+  };
+}
+
 // NOTE we don't dispose of slice9's textures here, its non trivial since they are shared.
 // We want to keep them loaded anyway since we only have a few and want them to load instantly.
 const cleanupSlice9s = cleanupObjOnExit(Slice9, obj => obj.geometry.dispose());
-const cleanupGLTFs = cleanupObjOnExit(GLTFModel, obj => gltfCache.release(obj.userData.gltfCacheKey));
+const cleanupGLTFs = cleanupObjOnExit(GLTFModel, obj => {
+  if (obj.userData.gltfCacheKey) {
+    gltfCache.release(obj.userData.gltfCacheKey);
+  } else {
+    obj.dispose();
+  }
+});
 const cleanupTexts = cleanupObjOnExit(Text, obj => obj.dispose());
 const cleanupMediaFrames = cleanupObjOnExit(MediaFrame, obj => obj.geometry.dispose());
 const cleanupAudioEmitters = cleanupObjOnExit(AudioEmitter, obj => {
@@ -31,13 +47,21 @@ const cleanupAudioEmitters = cleanupObjOnExit(AudioEmitter, obj => {
   const audioSystem = AFRAME.scenes[0].systems["hubs-systems"].audioSystem;
   audioSystem.removeAudio({ node: obj });
 });
-
-const exitedCacheKeyQuery = exitQuery(defineQuery([TextureCacheKey]));
-const releaseTexturesFromCache = world => {
-  exitedCacheKeyQuery(world).forEach(eid => {
-    releaseTexture(APP.getString(TextureCacheKey.src[eid]), TextureCacheKey.version[eid]);
-  });
-};
+const cleanupImages = cleanupObjOnExit(MediaImage, obj => {
+  releaseTextureByKey(APP.getString(MediaImage.cacheKey[obj.eid]));
+  obj.geometry.dispose();
+});
+const cleanupVideos = cleanupObjOnExit(MediaVideo, obj => {
+  disposeMaterial(obj.material);
+  obj.geometry.dispose();
+});
+const cleanupEnvironmentSettings = cleanupOnExit(EnvironmentSettings, eid => {
+  EnvironmentSettings.map.delete(eid);
+});
+const cleanupSkyboxes = cleanupObjOnExit(Skybox, obj => {
+  disposeMaterial(obj.sky.material);
+  obj.sky.geometry.dispose();
+});
 
 // TODO This feels messy and brittle
 //
@@ -85,8 +109,11 @@ export function removeObject3DSystem(world) {
   cleanupSlice9s(world);
   cleanupTexts(world);
   cleanupMediaFrames(world);
-  releaseTexturesFromCache(world);
+  cleanupImages(world);
+  cleanupVideos(world);
+  cleanupEnvironmentSettings(world);
   cleanupAudioEmitters(world);
+  cleanupSkyboxes(world);
 
   // Finally remove all the entities we just removed from the eid2obj map
   entities.forEach(removeFromMap);

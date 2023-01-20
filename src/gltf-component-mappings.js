@@ -2,7 +2,7 @@ import { sanitizeUrl } from "@braintree/sanitize-url";
 import "./components/gltf-model-plus";
 import { getSanitizedComponentMapping } from "./utils/component-mappings";
 import { TYPE, SHAPE, FIT } from "three-ammo/constants";
-const COLLISION_LAYERS = require("./constants").COLLISION_LAYERS;
+import { COLLISION_LAYERS } from "./constants";
 import { AudioType, DistanceModelType, SourceType } from "./components/audio-params";
 import { updateAudioSettings } from "./update-audio-settings";
 import { renderAsEntity } from "./utils/jsx-entity";
@@ -126,6 +126,7 @@ AFRAME.GLTFModelPlus.registerComponent("waypoint", "waypoint", (el, componentNam
 
 import { findAncestorWithComponent } from "./utils/scene-graph";
 import { createElementEntity } from "./utils/jsx-entity";
+import { setInitialNetworkedData } from "./utils/assign-network-ids";
 /** @jsx createElementEntity */ createElementEntity;
 
 AFRAME.GLTFModelPlus.registerComponent("media-frame", "media-frame", (el, _componentName, componentData) => {
@@ -135,8 +136,7 @@ AFRAME.GLTFModelPlus.registerComponent("media-frame", "media-frame", (el, _compo
 
   const networkedEl = findAncestorWithComponent(el, "networked");
   const rootNid = (networkedEl && networkedEl.components.networked.data.networkId) || "scene";
-  Networked.id[eid] = APP.getSid(`${rootNid}.${el.object3D.children[0].userData.gltfIndex}`);
-  APP.world.nid2eid.set(Networked.id[eid], eid);
+  setInitialNetworkedData(APP.world, eid, `${rootNid}.${el.object3D.children[0].userData.gltfIndex}`, rootNid);
 
   el.object3D.add(APP.world.eid2obj.get(eid));
 });

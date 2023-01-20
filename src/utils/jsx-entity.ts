@@ -3,6 +3,7 @@ import { preloadFont } from "troika-three-text";
 import {
   $isStringType,
   CameraTool,
+  ObjectMenu,
   CursorRaycastable,
   DestroyAtExtremeDistance,
   FloatyObject,
@@ -27,21 +28,42 @@ import {
   VideoMenuItem,
   NotRemoteHoverTarget,
   Deletable,
-  TextureCacheKey
+  SceneLoader,
+  NavMesh,
+  SceneRoot,
+  NetworkDebug,
+  WaypointPreview,
+  NetworkedFloatyObject
 } from "../bit-components";
 import { inflateMediaLoader } from "../inflators/media-loader";
 import { inflateMediaFrame } from "../inflators/media-frame";
-import { inflateGrabbable } from "../inflators/grabbable";
+import { GrabbableParams, inflateGrabbable } from "../inflators/grabbable";
 import { inflateImage } from "../inflators/image";
 import { inflateVideo } from "../inflators/video";
+import { inflateVideoLoader, VideoLoaderParams } from "../inflators/video-loader";
+import { inflateImageLoader, ImageLoaderParams } from "../inflators/image-loader";
 import { inflateModel, ModelParams } from "../inflators/model";
 import { inflateSlice9 } from "../inflators/slice9";
 import { inflateText } from "../inflators/text";
+import {
+  BackgroundParams,
+  EnvironmentSettingsParams,
+  FogParams,
+  inflateBackground,
+  inflateEnvironmentSettings,
+  inflateFog
+} from "../inflators/environment-settings";
+import { inflateSpawnpoint, inflateWaypoint, WaypointParams } from "../inflators/waypoint";
+import { inflateReflectionProbe, ReflectionProbeParams } from "../inflators/reflection-probe";
 import { HubsWorld } from "../app";
 import { Group, Object3D, Texture, VideoTexture } from "three";
 import { AlphaMode } from "./create-image-mesh";
 import { MediaLoaderParams } from "../inflators/media-loader";
 import { preload } from "./preload";
+import { DirectionalLightParams, inflateDirectionalLight } from "../inflators/directional-light";
+import { ProjectionMode } from "./projection-mode";
+import { inflateSkybox, SkyboxParams } from "../inflators/skybox";
+import { inflateSpawner, SpawnerParams } from "../inflators/spawner";
 
 preload(
   new Promise(resolve => {
@@ -56,12 +78,12 @@ const reservedAttrs = ["position", "rotation", "scale", "visible", "name", "laye
 
 export class Ref {
   current: number | null;
-  constructor() {
-    this.current = null;
+  constructor(value: number | null) {
+    this.current = value;
   }
 }
-export function createRef() {
-  return new Ref();
+export function createRef(value: number | null = null) {
+  return new Ref(value);
 }
 
 export function resolveRef(world: HubsWorld, ref: Ref) {
@@ -71,8 +93,8 @@ export function resolveRef(world: HubsWorld, ref: Ref) {
   return ref.current;
 }
 
-type ArrayVec3 = [x: number, y: number, z: number];
-type Attrs = {
+export type ArrayVec3 = [x: number, y: number, z: number];
+export type Attrs = {
   position?: ArrayVec3;
   rotation?: ArrayVec3;
   scale?: ArrayVec3;
@@ -82,8 +104,8 @@ type Attrs = {
   ref?: Ref;
 };
 
-type EntityDef = {
-  components: ComponentData;
+export type EntityDef = {
+  components: JSXComponentData;
   attrs: Attrs;
   children: EntityDef[];
   ref?: Ref;
@@ -93,10 +115,10 @@ function isReservedAttr(attr: string): attr is keyof Attrs {
   return reservedAttrs.includes(attr);
 }
 
-type ComponentFn = string | ((attrs: Attrs & ComponentData, children?: EntityDef[]) => EntityDef);
+type ComponentFn = string | ((attrs: Attrs & JSXComponentData, children?: EntityDef[]) => EntityDef);
 export function createElementEntity(
   tag: "entity" | ComponentFn,
-  attrs: Attrs & ComponentData,
+  attrs: Attrs & JSXComponentData,
   ...children: EntityDef[]
 ): EntityDef {
   attrs = attrs || {};
@@ -104,7 +126,7 @@ export function createElementEntity(
     return tag(attrs, children);
   } else if (tag === "entity") {
     const outputAttrs: Attrs = {};
-    const components: ComponentData & Attrs = {};
+    const components: JSXComponentData & Attrs = {};
     let ref = undefined;
 
     for (const attr in attrs) {
@@ -114,7 +136,7 @@ export function createElementEntity(
         ref = attrs[attr];
       } else {
         // if jsx transformed the attr into attr: true, change it to attr: {}.
-        const c = attr as keyof ComponentData;
+        const c = attr as keyof JSXComponentData;
         components[c] = attrs[c] === true ? {} : attrs[c];
       }
     }
@@ -185,24 +207,27 @@ interface InflatorFn {
 
 // @TODO these properties should import types from their inflators
 export interface ComponentData {
+  directionalLight?: DirectionalLightParams;
+  grabbable?: GrabbableParams;
+}
+
+export interface JSXComponentData extends ComponentData {
   slice9?: {
     size: [width: number, height: number];
     insets: [top: number, buttom: number, left: number, right: number];
+    texture: Texture;
   };
   image?: {
     texture: Texture;
     ratio: number;
-    projection: "flat" | "360-equirectangular";
+    projection: ProjectionMode;
     alphaMode: typeof AlphaMode.Blend | typeof AlphaMode.Mask | typeof AlphaMode.Opaque;
-  };
-  textureCacheKey?: {
-    src: string;
-    version: number;
+    cacheKey: string;
   };
   video?: {
     texture: VideoTexture;
     ratio: number;
-    projection: "flat" | "360-equirectangular";
+    projection: ProjectionMode;
     autoPlay: boolean;
   };
   networkedVideo?: true;
@@ -227,14 +252,31 @@ export interface ComponentData {
   makeKinematicOnRelease?: true;
   destroyAtExtremeDistance?: true;
 
-  // @TODO
+  // @TODO Define all the anys
   networked?: any;
   textButton?: any;
   hoverButton?: any;
   rigidbody?: any;
   physicsShape?: any;
   floatyObject?: any;
+  networkedFloatyObject?: any;
   networkedTransform?: any;
+  objectMenu?: {
+    pinButtonRef: Ref;
+    unpinButtonRef: Ref;
+    cameraFocusButtonRef: Ref;
+    cameraTrackButtonRef: Ref;
+    removeButtonRef: Ref;
+    dropButtonRef: Ref;
+    inspectButtonRef: Ref;
+    deserializeDrawingButtonRef: Ref;
+    openLinkButtonRef: Ref;
+    refreshButtonRef: Ref;
+    cloneButtonRef: Ref;
+    rotateButtonRef: Ref;
+    mirrorButtonRef: Ref;
+    scaleButtonRef: Ref;
+  };
   cameraTool?: {
     snapMenuRef: Ref;
     nextButtonRef: Ref;
@@ -251,17 +293,36 @@ export interface ComponentData {
   };
   animationMixer?: any;
   mediaLoader?: MediaLoaderParams;
+  sceneRoot?: boolean;
+  sceneLoader?: { src: string };
   mediaFrame?: any;
   object3D?: any;
   text?: any;
   model?: ModelParams;
-  grabbable?: any;
+  networkDebug?: boolean;
+  waypointPreview?: boolean;
+}
+
+export interface GLTFComponentData extends ComponentData {
+  video?: VideoLoaderParams;
+  image?: ImageLoaderParams;
+  environmentSettings?: EnvironmentSettingsParams;
+  reflectionProbe?: ReflectionProbeParams;
+  navMesh?: true;
+  waypoint?: WaypointParams;
+  spawner: SpawnerParams;
+
+  // deprecated
+  spawnPoint?: true;
+  skybox: SkyboxParams;
+  fog: FogParams;
+  background: BackgroundParams;
 }
 
 declare global {
   namespace createElementEntity.JSX {
     interface IntrinsicElements {
-      entity: ComponentData &
+      entity: JSXComponentData &
         Attrs & {
           children?: IntrinsicElements[];
         };
@@ -273,7 +334,15 @@ declare global {
   }
 }
 
-export const inflators: Required<{ [K in keyof ComponentData]: InflatorFn }> = {
+export const commonInflators: Required<{ [K in keyof ComponentData]: InflatorFn }> = {
+  grabbable: inflateGrabbable,
+
+  // inflators that create Object3Ds
+  directionalLight: inflateDirectionalLight
+};
+
+const jsxInflators: Required<{ [K in keyof JSXComponentData]: InflatorFn }> = {
+  ...commonInflators,
   cursorRaycastable: createDefaultInflator(CursorRaycastable),
   remoteHoverTarget: createDefaultInflator(RemoteHoverTarget),
   isNotRemoteHoverTarget: createDefaultInflator(NotRemoteHoverTarget),
@@ -289,18 +358,22 @@ export const inflators: Required<{ [K in keyof ComponentData]: InflatorFn }> = {
   rigidbody: createDefaultInflator(Rigidbody),
   physicsShape: createDefaultInflator(PhysicsShape),
   floatyObject: createDefaultInflator(FloatyObject),
+  networkedFloatyObject: createDefaultInflator(NetworkedFloatyObject),
   makeKinematicOnRelease: createDefaultInflator(MakeKinematicOnRelease),
   destroyAtExtremeDistance: createDefaultInflator(DestroyAtExtremeDistance),
   networkedTransform: createDefaultInflator(NetworkedTransform),
   networked: createDefaultInflator(Networked),
+  objectMenu: createDefaultInflator(ObjectMenu),
   cameraTool: createDefaultInflator(CameraTool, { captureDurIdx: 1 }),
   animationMixer: createDefaultInflator(AnimationMixer),
   networkedVideo: createDefaultInflator(NetworkedVideo),
   videoMenu: createDefaultInflator(VideoMenu),
   videoMenuItem: createDefaultInflator(VideoMenuItem),
-  textureCacheKey: createDefaultInflator(TextureCacheKey),
+  sceneRoot: createDefaultInflator(SceneRoot),
+  sceneLoader: createDefaultInflator(SceneLoader),
+  networkDebug: createDefaultInflator(NetworkDebug),
+  waypointPreview: createDefaultInflator(WaypointPreview),
   mediaLoader: inflateMediaLoader,
-  grabbable: inflateGrabbable,
 
   // inflators that create Object3Ds
   mediaFrame: inflateMediaFrame,
@@ -312,17 +385,36 @@ export const inflators: Required<{ [K in keyof ComponentData]: InflatorFn }> = {
   video: inflateVideo
 };
 
-export function inflatorExists(name: string): name is keyof ComponentData {
-  return inflators.hasOwnProperty(name);
+export const gltfInflators: Required<{ [K in keyof GLTFComponentData]: InflatorFn }> = {
+  ...commonInflators,
+  video: inflateVideoLoader,
+  image: inflateImageLoader,
+  reflectionProbe: inflateReflectionProbe,
+  navMesh: createDefaultInflator(NavMesh),
+  waypoint: inflateWaypoint,
+  environmentSettings: inflateEnvironmentSettings,
+  fog: inflateFog,
+  background: inflateBackground,
+  spawnPoint: inflateSpawnpoint,
+  skybox: inflateSkybox,
+  spawner: inflateSpawner
+};
+
+function jsxInflatorExists(name: string): name is keyof JSXComponentData {
+  return Object.prototype.hasOwnProperty.call(jsxInflators, name);
+}
+
+export function gltfInflatorExists(name: string): name is keyof GLTFComponentData {
+  return Object.prototype.hasOwnProperty.call(gltfInflators, name);
 }
 
 export function renderAsEntity(world: HubsWorld, entityDef: EntityDef) {
   const eid = entityDef.ref ? resolveRef(world, entityDef.ref) : addEntity(world);
   Object.keys(entityDef.components).forEach(name => {
-    if (!inflatorExists(name)) {
+    if (!jsxInflatorExists(name)) {
       throw new Error(`Failed to inflate unknown component called ${name}`);
     }
-    inflators[name](world, eid, entityDef.components[name]);
+    jsxInflators[name](world, eid, entityDef.components[name]);
   });
 
   let obj = world.eid2obj.get(eid);
